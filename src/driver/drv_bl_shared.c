@@ -667,14 +667,19 @@ void BL_ProcessUpdate(float voltage, float current, float power,
   sensdataset->sensors[OBK_CURRENT].lastReading = current;
   sensdataset->sensors[OBK_POWER].lastReading = power;
   sensdataset->sensors[OBK_FREQUENCY].lastReading = frequency;
-  sensdataset->sensors[OBK_POWER_APPARENT].lastReading = sensdataset->sensors[OBK_VOLTAGE].lastReading * sensdataset->sensors[OBK_CURRENT].lastReading;
-  sensdataset->sensors[OBK_POWER_REACTIVE].lastReading = (sensdataset->sensors[OBK_POWER_APPARENT].lastReading <= fabsf((float)sensdataset->sensors[OBK_POWER].lastReading)
-    ? 0
-    : sqrtf(powf((float)sensdataset->sensors[OBK_POWER_APPARENT].lastReading, 2) -
-      powf((float)sensdataset->sensors[OBK_POWER].lastReading, 2)));
-  sensdataset->sensors[OBK_POWER_FACTOR].lastReading =
-    (sensdataset->sensors[OBK_POWER_APPARENT].lastReading == 0 ? 1 : sensdataset->sensors[OBK_POWER].lastReading / sensdataset->sensors[OBK_POWER_APPARENT].lastReading);
 
+  // Apparent Power, Reactive Power and Power Factor are derived values (not measured directly
+  // by most chips) and not everyone needs/wants them cluttering their MQTT/HA setup.
+  // Flag OBK_FLAG_POWER_HIDE_EXTENDED_SENSORS allows disabling their calculation and reporting entirely.
+  if (!CFG_HasFlag(OBK_FLAG_POWER_HIDE_EXTENDED_SENSORS)) {
+    sensdataset->sensors[OBK_POWER_APPARENT].lastReading = sensdataset->sensors[OBK_VOLTAGE].lastReading * sensdataset->sensors[OBK_CURRENT].lastReading;
+    sensdataset->sensors[OBK_POWER_REACTIVE].lastReading = (sensdataset->sensors[OBK_POWER_APPARENT].lastReading <= fabsf((float)sensdataset->sensors[OBK_POWER].lastReading)
+      ? 0
+      : sqrtf(powf((float)sensdataset->sensors[OBK_POWER_APPARENT].lastReading, 2) -
+        powf((float)sensdataset->sensors[OBK_POWER].lastReading, 2)));
+    sensdataset->sensors[OBK_POWER_FACTOR].lastReading =
+      (sensdataset->sensors[OBK_POWER_APPARENT].lastReading == 0 ? 1 : sensdataset->sensors[OBK_POWER].lastReading / sensdataset->sensors[OBK_POWER_APPARENT].lastReading);
+  }
 
   sensors_reciveddata[asensdatasetix] = 1;
   {
